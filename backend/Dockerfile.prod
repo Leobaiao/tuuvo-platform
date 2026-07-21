@@ -1,0 +1,19 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instalar dependências (incluindo devDependencies para o build TypeScript)
+COPY backend/package.json backend/package-lock.json ./
+RUN npm ci
+
+# Copiar código-fonte e compilar TypeScript
+COPY backend/tsconfig.json ./
+COPY backend/src ./src
+RUN npm run build
+
+# Remover devDependencies após o build
+RUN npm prune --production
+
+EXPOSE 3000
+
+CMD ["npm", "start"]

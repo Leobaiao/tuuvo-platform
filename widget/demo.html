@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>TUUVO — Sandbox do Widget</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: Inter, Arial, sans-serif; background: #F5F7FA; margin: 0; padding: 40px; color: #1A143D; }
+    .card { max-width: 640px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 32px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    h1 { font-size: 22px; }
+    code { background: #F1F4F9; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Sandbox — TUUVO Webchat Widget</h1>
+    <p>Esta página simula o site de um cliente com o widget embutido. Troque
+       <code>data-tenant</code> e <code>data-widget</code> pelos IDs reais criados
+       via API do Superadmin/tenant antes de testar.</p>
+    <p>O balão flutuante aparece no canto inferior direito.</p>
+  </div>
+
+  <script
+    src="./tuuvo-widget.js"
+    data-tenant="00000000-0000-0000-0000-000000000000"
+    data-widget="00000000-0000-0000-0000-000000000001"
+    data-backend="http://localhost:3000"
+    data-socket="http://localhost:3000"
+  ></script>
+</body>
+</html>

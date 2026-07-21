@@ -1,0 +1,203 @@
+name: Deploy Tuuvo to Locaweb
+
+on:
+  push:
+    branches: [main]
+
+# Evita dois deploys simultâneos — o mais recente cancela o anterior
+concurrency:
+  group: deploy-tuuvo-production
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ──────────────────────────────────────────────
+  # 1. Build Check (garante que o TypeScript compila)
+  # ──────────────────────────────────────────────
+  build_check:
+    name: 🔨 Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      - name: Build Backend
+        run: |
+          cd backend
+          npm ci --prefer-offline
+          npm run build
+
+  # ──────────────────────────────────────────────
+  # 2. Deploy para Produção via SSH
+  # ──────────────────────────────────────────────
+  deploy:
+    name: 🚀 Deploy to Production
+    needs: build_check
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: Configure known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Generate .env file locally
+        run: |
+          cat <<'EOF' > .env.prod
+          POSTGRES_USER=tuuvo
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB=tuuvo
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_EXPIRES_IN=8h
+          CREDENTIALS_ENCRYPTION_KEY=${{ secrets.CREDENTIALS_ENCRYPTION_KEY }}
+          GTI_BASE_URL=https://api.gtiapi.workers.dev
+          MKOM_SMS_BASE_URL=https://sms.mkmservice.com/sms/api/transmission/v1
+          PUBLIC_BASE_URL=https://api.tuuvo.app.br
+          PORT=3000
+          EOF
+          # Remove espaços no início das linhas
+          sed -i 's/^[[:space:]]*//' .env.prod
+
+      # Validação: garante que variáveis críticas não estão vazias
+      - name: Validate .env file
+        run: |
+          echo "🔍 Validando variáveis críticas no .env..."
+          for var in POSTGRES_PASSWORD JWT_SECRET CREDENTIALS_ENCRYPTION_KEY; do
+            value=$(grep "^${var}=" .env.prod | cut -d'=' -f2-)
+            if [ -z "$value" ]; then
+              echo "❌ ERRO: ${var} está vazia no .env!"
+              exit 1
+            fi
+          done
+          echo "✅ Todas as variáveis críticas estão presentes."
+
+      - name: Upload .env to server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          scp -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new .env.prod $SSH_USER@$SSH_HOST:/opt/tuuvo/.env
+
+      - name: Deploy via SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new $SSH_USER@$SSH_HOST << 'EOF'
+            set -e
+            cd /opt/tuuvo
+
+            # Clonar o repositório se ainda não existir
+            if [ ! -d ".git" ]; then
+              git clone https://github.com/Leobaiao/tuuvo-platform.git .
+            else
+              git fetch origin main
+              git reset --hard origin/main
+            fi
+
+            # Verificar se deve resetar o banco (procura [reset-db] na mensagem do commit)
+            COMMIT_MSG=$(git log -1 --pretty=%B)
+            if echo "$COMMIT_MSG" | grep -qi "\[reset-db\]"; then
+              echo "⚠️  RESET-DB detectado! Apagando volumes de dados..."
+              docker compose -f deploy/docker-compose.prod.yml down -v || true
+            fi
+
+            # 1. Build das imagens
+            echo "🏗️  Build das imagens..."
+            docker compose -f deploy/docker-compose.prod.yml build
+
+            # 2. Subir APENAS o banco de dados
+            echo "⏳ Subindo banco de dados..."
+            docker compose -f deploy/docker-compose.prod.yml up -d postgres
+
+            # 3. Aguardar o banco de dados ficar saudável
+            echo "⏳ Aguardando banco de dados..."
+            for i in $(seq 1 30); do
+              if docker inspect --format='{{.State.Health.Status}}' tuuvo_postgres_prod 2>/dev/null | grep -q healthy; then
+                echo "✅ Banco de dados saudável."
+                break
+              fi
+              if [ "$i" = "30" ]; then
+                echo "❌ Banco de dados não ficou saudável em 60s!"
+                docker logs tuuvo_postgres_prod --tail 20
+                exit 1
+              fi
+              sleep 2
+            done
+
+            # 4. Subir todos os serviços
+            echo "🚀 Subindo backend e frontend..."
+            docker compose -f deploy/docker-compose.prod.yml up -d
+
+            # 5. Aguardar o backend iniciar
+            echo "⏳ Aguardando backend..."
+            for i in $(seq 1 30); do
+              if docker logs tuuvo_backend_prod --tail 5 2>&1 | grep -qi "listening\|started\|ready"; then
+                echo "✅ Backend iniciado."
+                break
+              fi
+              if [ "$i" = "30" ]; then
+                echo "⚠️ Backend pode não ter iniciado (timeout 60s). Verificar logs."
+                docker logs tuuvo_backend_prod --tail 20
+              fi
+              sleep 2
+            done
+
+            # 6. Limpeza de imagens órfãs para poupar espaço no disco
+            docker image prune -f
+            echo "🎉 Deploy do Tuuvo concluído com sucesso!"
+          EOF
+
+  # ──────────────────────────────────────────────
+  # 3. Smoke Test Pós-Deploy
+  # ──────────────────────────────────────────────
+  smoke_test:
+    name: 🧪 Smoke Test
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aguardar estabilização (30s)
+        run: sleep 30
+
+      - name: Verificar API Backend
+        run: |
+          echo "🔍 Testando API Tuuvo..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://api.tuuvo.app.br/health 2>/dev/null || echo "000")
+          if [ "$STATUS" = "200" ] || [ "$STATUS" = "404" ]; then
+            echo "✅ API Backend respondendo (HTTP $STATUS)"
+          else
+            echo "⚠️ API Backend retornou HTTP $STATUS — pode estar iniciando ou com problema."
+          fi
+
+      - name: Verificar Frontend
+        run: |
+          echo "🔍 Testando Frontend Tuuvo..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://tuuvo.app.br 2>/dev/null || echo "000")
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Frontend OK (HTTP $STATUS)"
+          else
+            echo "⚠️ Frontend retornou HTTP $STATUS"
+          fi

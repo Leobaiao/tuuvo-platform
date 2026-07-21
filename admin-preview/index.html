@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>TUUVO — Preview do Painel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --tuuvo-escuro: #1A143D;
+    --tuuvo-primaria: #6A38E2;
+    --tuuvo-destaque: #8A5CF6;
+    --tuuvo-lavanda: #A78BFA;
+    --tuuvo-grafite: #1F2430;
+    --tuuvo-sucesso: #22C55E;
+    --tuuvo-info: #3B82F6;
+    --tuuvo-alerta: #F59E0B;
+    --tuuvo-erro: #EF4444;
+    --cinza-texto: #5E6B7A;
+    --branco: #FFFFFF;
+    --bg: #F4F6FA;
+    --border: #E4E9F1;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: Inter, Arial, sans-serif; background: var(--bg); color: var(--tuuvo-escuro);
+    display: flex; min-height: 100vh;
+  }
+  /* Sidebar */
+  .sidebar {
+    width: 240px; background: var(--tuuvo-escuro); color: #fff; padding: 24px 16px; flex-shrink: 0;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; padding: 0 8px; }
+  .brand-mark {
+    width: 30px; height: auto; flex-shrink: 0; object-fit: contain;
+  }
+  .brand strong {
+    font-family: 'Plus Jakarta Sans', Inter, Arial, sans-serif;
+    font-weight: 600; font-size: 17px; letter-spacing: .01em;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px;
+    color: #C6D0E6; font-size: 14px; cursor: pointer; margin-bottom: 4px; transition: background .15s;
+  }
+  .nav-item:hover { background: rgba(255,255,255,.06); }
+  .nav-item.active { background: var(--tuuvo-primaria); color: #fff; }
+  .nav-section-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #5C6B8A; margin: 20px 0 8px 12px; }
+
+  /* Main */
+  .main { flex: 1; padding: 32px 40px; overflow-y: auto; }
+  .page { display: none; }
+  .page.active { display: block; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .subtitle { color: var(--cinza-texto); font-size: 14px; margin: 0 0 28px; }
+
+  .card { background: #fff; border-radius: 12px; border: 1px solid var(--border); }
+  .card-pad { padding: 24px; }
+
+  /* Tenants table */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--cinza-texto); padding: 14px 20px; border-bottom: 1px solid var(--border); }
+  td { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  tr:last-child td { border-bottom: none; }
+  .badge { padding: 3px 10px; border-radius: 100px; font-size: 12px; font-weight: 600; }
+  .badge.ativo { background: color-mix(in srgb, var(--tuuvo-sucesso) 15%, white); color: color-mix(in srgb, var(--tuuvo-sucesso) 75%, black); }
+  .badge.trial { background: color-mix(in srgb, var(--tuuvo-alerta) 18%, white); color: color-mix(in srgb, var(--tuuvo-alerta) 70%, black); }
+  .badge.suspenso { background: color-mix(in srgb, var(--tuuvo-erro) 12%, white); color: color-mix(in srgb, var(--tuuvo-erro) 75%, black); }
+  .btn {
+    background: var(--tuuvo-primaria); color: #fff; border: none; border-radius: 8px;
+    padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .btn.secondary { background: transparent; border: 1px solid var(--border); color: var(--tuuvo-escuro); }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+
+  /* Widget builder */
+  .builder-grid { display: grid; grid-template-columns: 1fr 380px; gap: 24px; align-items: start; }
+  .field { margin-bottom: 18px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--tuuvo-escuro); }
+  .field input[type=text], .field select, .field textarea {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit;
+  }
+  .color-row { display: flex; gap: 12px; }
+  .color-field { flex: 1; }
+  .color-field input[type=color] { width: 100%; height: 38px; border: 1px solid var(--border); border-radius: 8px; padding: 2px; cursor: pointer; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .switch-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--border); }
+  .switch-row:first-of-type { border-top: none; }
+  .toggle { position: relative; width: 40px; height: 22px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; background: #CBD3E1; border-radius: 22px; cursor: pointer; transition: .2s; }
+  .slider:before { content: ""; position: absolute; width: 18px; height: 18px; left: 2px; top: 2px; background: #fff; border-radius: 50%; transition: .2s; }
+  .toggle input:checked + .slider { background: var(--tuuvo-destaque); }
+  .toggle input:checked + .slider:before { transform: translateX(18px); }
+
+  /* Preview device */
+  .preview-wrap { position: sticky; top: 24px; }
+  .preview-frame {
+    background: #E9EDF4; border-radius: 16px; padding: 30px 20px; min-height: 560px; position: relative;
+    background-image: radial-gradient(circle, #DCE2ED 1px, transparent 1px); background-size: 14px 14px;
+  }
+  .preview-label { font-size: 12px; color: var(--cinza-texto); text-align: center; margin-bottom: 12px; }
+
+  .w-panel {
+    width: 300px; margin: 0 auto; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(7,26,61,.18);
+    display: flex; flex-direction: column; font-family: Inter, Arial, sans-serif;
+  }
+  .w-header { padding: 14px 16px; display: flex; align-items: center; gap: 10px; color: #fff; }
+  .w-avatar { width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.25); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+  .w-header-text strong { display: block; font-size: 14px; }
+  .w-header-text span { font-size: 11px; opacity: .85; }
+  .w-messages { padding: 14px; min-height: 180px; display: flex; flex-direction: column; gap: 8px; }
+  .w-msg { max-width: 78%; padding: 8px 12px; border-radius: 12px; font-size: 13px; line-height: 1.4; }
+  .w-msg.bot { border-bottom-left-radius: 3px; }
+  .w-msg.visitor { align-self: flex-end; color: #fff; border-bottom-right-radius: 3px; }
+  .w-input { display: flex; gap: 8px; padding: 8px; border-top: 1px solid #eee; background: #fff; }
+  .w-input input { flex: 1; border: 1px solid #ddd; border-radius: 8px; padding: 7px 10px; font-size: 13px; }
+  .w-input button { color: #fff; border: none; border-radius: 8px; padding: 0 12px; font-size: 13px; }
+  .w-powered { text-align: center; font-size: 10px; color: #99a; padding: 4px; background: #fff; }
+  .w-bubble {
+    width: 50px; height: 50px; border-radius: 50%; margin: 16px auto 0; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 16px rgba(7,26,61,.25);
+  }
+  .w-bubble svg { width: 22px; height: 22px; fill: #fff; }
+
+  /* Departamentos / Canais simples */
+  .list-item { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .list-item:last-child { border-bottom: none; }
+  .list-item-title { font-size: 14px; font-weight: 600; }
+  .list-item-sub { font-size: 12px; color: var(--cinza-texto); margin-top: 2px; }
+  .pill { font-size: 12px; background: #EEF2FF; color: var(--tuuvo-primaria); padding: 3px 10px; border-radius: 100px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="brand">
+    <img class="brand-mark" src="assets/tuuvo-mark.png" alt="TUUVO" />
+    <strong>TUUVO</strong>
+  </div>
+
+  <div class="nav-section-label">Plataforma</div>
+  <div class="nav-item active" data-page="superadmin">🏢 Superadmin — Tenants</div>
+  <div class="nav-item" data-page="providers">🔑 Credenciais de canais</div>
+
+  <div class="nav-section-label">Painel do tenant</div>
+  <div class="nav-item" data-page="departments">🗂️ Departamentos</div>
+  <div class="nav-item" data-page="channels">💬 Canais</div>
+  <div class="nav-item" data-page="builder">🎨 Widget Builder</div>
+</div>
+
+<div class="main">
+
+  <!-- ===================== SUPERADMIN ===================== -->
+  <div class="page active" id="page-superadmin">
+    <h1>Tenants</h1>
+    <p class="subtitle">Cadastro de clientes, planos e status — visão do Superadmin.</p>
+    <div class="card">
+      <div class="toolbar" style="padding: 20px 20px 0;">
+        <div></div>
+        <button class="btn">+ Novo tenant</button>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Empresa</th><th>Plano</th><th>Status</th><th>Canais ativos</th><th>Criado em</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Loja Boa Vista</strong><br><span class="list-item-sub">boavista.tuuvo.app.br</span></td>
+            <td>Trial · 15 dias</td>
+            <td><span class="badge trial">Trial</span></td>
+            <td>Webchat, WhatsApp</td>
+            <td>16/07/2026</td>
+          </tr>
+          <tr>
+            <td><strong>Clínica Vitalis</strong><br><span class="list-item-sub">vitalis.tuuvo.app.br</span></td>
+            <td>Pro</td>
+            <td><span class="badge ativo">Ativo</span></td>
+            <td>Webchat, WhatsApp, SMS, RCS</td>
+            <td>02/06/2026</td>
+          </tr>
+          <tr>
+            <td><strong>Distribuidora Nortex</strong><br><span class="list-item-sub">nortex.tuuvo.app.br</span></td>
+            <td>Starter</td>
+            <td><span class="badge suspenso">Suspenso</span></td>
+            <td>Webchat</td>
+            <td>11/03/2026</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===================== PROVIDERS ===================== -->
+  <div class="page" id="page-providers">
+    <h1>Credenciais de canais (plataforma)</h1>
+    <p class="subtitle">SMS e RCS usam brokers do grupo — credenciais cadastradas uma única vez aqui, não por tenant.</p>
+    <div class="card">
+      <div class="list-item">
+        <div>
+          <div class="list-item-title">MKOM — MKSMS (SMS)</div>
+          <div class="list-item-sub">sms.mkmservice.com/sms/api/transmission/v1 · token configurado</div>
+        </div>
+        <span class="pill">Ativo</span>
+      </div>
+      <div class="list-item">
+        <div>
+          <div class="list-item-title">MKOM — MKSMS (RCS)</div>
+          <div class="list-item-sub">mesmo endpoint do SMS, diferenciado por rcs_type</div>
+        </div>
+        <span class="pill">Ativo</span>
+      </div>
+      <div class="list-item">
+        <div>
+          <div class="list-item-title">Voz — a definir</div>
+          <div class="list-item-sub">canal reservado na arquitetura, aguardando escolha de provedor</div>
+        </div>
+        <span class="pill" style="background:#F1F4F9;color:#5E6B7A;">Pendente</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== DEPARTAMENTOS ===================== -->
+  <div class="page" id="page-departments">
+    <h1>Departamentos</h1>
+    <p class="subtitle">Vivem dentro da conexão — uma única instância de WhatsApp pode atender vários setores.</p>
+    <div class="card">
+      <div class="list-item">
+        <div>
+          <div class="list-item-title">Atendimento Geral</div>
+          <div class="list-item-sub">Departamento padrão · seg-sex 09h-18h</div>
+        </div>
+        <span class="pill">Webchat, WhatsApp</span>
+      </div>
+      <div class="list-item">
+        <div>
+          <div class="list-item-title">Comercial</div>
+          <div class="list-item-sub">Roteamento por menu · seg-sex 09h-18h</div>
+        </div>
+        <span class="pill">WhatsApp, RCS</span>
+      </div>
+      <div class="list-item">
+        <div>
+          <div class="list-item-title">Suporte</div>
+          <div class="list-item-sub">Fila com round-robin · 24/7</div>
+        </div>
+        <span class="pill">Webchat, WhatsApp, SMS</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== CANAIS ===================== -->
+  <div class="page" id="page-channels">
+    <h1>Canais</h1>
+    <p class="subtitle">Ativados por opção do cliente — nada vem ligado por padrão.</p>
+    <div class="card">
+      <div class="list-item">
+        <div>
+          <div class="list-item-title">💬 Webchat</div>
+          <div class="list-item-sub">Nativo — widget embutido no site</div>
+        </div>
+        <span class="badge ativo">Conectado</span>
+      </div>
+      <div class="list-item">
+        <div>
+          <div class="list-item-title">📱 WhatsApp — Comercial</div>
+          <div class="list-item-sub">Driver GTI · instância pareada</div>
+        </div>
+        <span class="badge ativo">Conectado</span>
+      </div>
+      <div class="list-item">
+        <div>
+          <div class="list-item-title">✉️ SMS</div>
+          <div class="list-item-sub">Broker MKOM</div>
+        </div>
+        <span class="badge ativo">Conectado</span>
+      </div>
+      <div class="list-item">
+        <div>
+          <div class="list-item-title">🟢 RCS</div>
+          <div class="list-item-sub">Broker MKOM · fallback SMS automático</div>
+        </div>
+        <span class="badge trial">Configurar sender</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== WIDGET BUILDER ===================== -->
+  <div class="page" id="page-builder">
+    <h1>Widget Builder</h1>
+    <p class="subtitle">Tudo aqui é dado, não deploy — o preview atualiza em tempo real.</p>
+
+    <div class="builder-grid">
+      <div class="card card-pad">
+        <div class="field">
+          <label>Título do header</label>
+          <input type="text" id="in-titulo" value="Fale conosco" />
+        </div>
+        <div class="field">
+          <label>Subtítulo</label>
+          <input type="text" id="in-subtitulo" value="Normalmente respondemos rápido" />
+        </div>
+        <div class="field">
+          <label>Mensagem de boas-vindas</label>
+          <textarea id="in-boasvindas" rows="2">Olá! Como podemos ajudar?</textarea>
+        </div>
+
+        <div class="field">
+          <label>Cores</label>
+          <div class="color-row">
+            <div class="color-field">
+              <input type="color" id="in-corprimaria" value="#6A38E2" />
+              <div class="list-item-sub" style="margin-top:4px;">Primária</div>
+            </div>
+            <div class="color-field">
+              <input type="color" id="in-corfundo" value="#FFFFFF" />
+              <div class="list-item-sub" style="margin-top:4px;">Fundo</div>
+            </div>
+            <div class="color-field">
+              <input type="color" id="in-cortexto" value="#1A143D" />
+              <div class="list-item-sub" style="margin-top:4px;">Texto</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label>Dimensão</label>
+            <select id="in-dimensao">
+              <option value="compacto">Compacto (360×520)</option>
+              <option value="padrao" selected>Padrão (400×640)</option>
+              <option value="amplo">Amplo (440×760)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Posição</label>
+            <select id="in-posicao">
+              <option value="bottom-right" selected>Canto inferior direito</option>
+              <option value="bottom-left">Canto inferior esquerdo</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="switch-row">
+          <span>Som de notificação</span>
+          <label class="toggle"><input type="checkbox" id="in-som" checked /><span class="slider"></span></label>
+        </div>
+        <div class="switch-row">
+          <span>Mostrar "Powered by TUUVO"</span>
+          <label class="toggle"><input type="checkbox" id="in-powered" checked /><span class="slider"></span></label>
+        </div>
+
+        <button class="btn" style="margin-top: 20px;">Publicar widget</button>
+      </div>
+
+      <div class="preview-wrap">
+        <div class="preview-label">Preview ao vivo</div>
+        <div class="preview-frame">
+          <div class="w-panel" id="w-panel">
+            <div class="w-header" id="w-header">
+              <div class="w-avatar">T</div>
+              <div class="w-header-text">
+                <strong id="w-titulo">Fale conosco</strong>
+                <span id="w-subtitulo">Normalmente respondemos rápido</span>
+              </div>
+            </div>
+            <div class="w-messages" id="w-messages">
+              <div class="w-msg bot" id="w-boasvindas">Olá! Como podemos ajudar?</div>
+              <div class="w-msg visitor" id="w-visitor-msg">Quero saber sobre os planos</div>
+            </div>
+            <div class="w-input">
+              <input type="text" placeholder="Digite sua mensagem..." disabled />
+              <button id="w-sendbtn">Enviar</button>
+            </div>
+            <div class="w-powered" id="w-powered">Powered by TUUVO</div>
+          </div>
+          <div class="w-bubble" id="w-bubble">
+            <svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Navegação entre páginas
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      item.classList.add('active');
+      document.getElementById('page-' + item.dataset.page).classList.add('active');
+    });
+  });
+
+  // Widget Builder — preview ao vivo
+  const $ = (id) => document.getElementById(id);
+
+  function applyPreview() {
+    const corPrimaria = $('in-corprimaria').value;
+    const corFundo = $('in-corfundo').value;
+    const corTexto = $('in-cortexto').value;
+
+    $('w-header').style.background = corPrimaria;
+    $('w-bubble').style.background = corPrimaria;
+    $('w-sendbtn').style.background = corPrimaria;
+    $('w-panel').style.background = corFundo;
+    $('w-messages').style.background = corFundo;
+    $('w-visitor-msg').style.background = corPrimaria;
+    $('w-boasvindas').style.background = '#F1F4F9';
+    $('w-boasvindas').style.color = corTexto;
+
+    $('w-titulo').textContent = $('in-titulo').value || 'Fale conosco';
+    $('w-subtitulo').textContent = $('in-subtitulo').value || '';
+    $('w-boasvindas').textContent = $('in-boasvindas').value || '';
+
+    const dims = {
+      compacto: '260px', padrao: '300px', amplo: '330px'
+    };
+    $('w-panel').style.width = dims[$('in-dimensao').value] || '300px';
+
+    $('w-powered').style.display = $('in-powered').checked ? 'block' : 'none';
+  }
+
+  ['in-titulo','in-subtitulo','in-boasvindas','in-corprimaria','in-corfundo','in-cortexto','in-dimensao','in-powered']
+    .forEach(id => $(id).addEventListener('input', applyPreview));
+
+  applyPreview();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,71 @@
+services:
+  # ─── Banco de Dados (PostgreSQL) ───
+  postgres:
+    image: postgres:16-alpine
+    container_name: tuuvo_postgres_prod
+    env_file:
+      - ../.env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tuuvo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-tuuvo}
+    volumes:
+      - tuuvo_pg_data_prod:/var/lib/postgresql/data
+      - ../db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tuuvo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: always
+    networks:
+      - internal
+
+  # ─── Backend API (Node.js / Express) ───
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile.prod
+    container_name: tuuvo_backend_prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-tuuvo}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tuuvo}
+      PORT: 3000
+    ports:
+      - "4002:3000"   # Expõe na porta 4002 do host (Caddy faz proxy → aqui)
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    restart: always
+    networks:
+      - internal
+
+  # ─── Frontend (HTML/CSS/JS estático servido via Nginx) ───
+  frontend:
+    image: nginx:alpine
+    container_name: tuuvo_frontend_prod
+    depends_on:
+      - backend
+    ports:
+      - "4000:80"     # Expõe na porta 4000 do host (Caddy faz proxy → aqui)
+    volumes:
+      - ../frontend:/usr/share/nginx/html:ro
+    restart: always
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  tuuvo_pg_data_prod:

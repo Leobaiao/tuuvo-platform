@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tuuvo_postgres
+    environment:
+      POSTGRES_USER: tuuvo
+      POSTGRES_PASSWORD: tuuvo
+      POSTGRES_DB: tuuvo
+    ports:
+      - "5433:5432" # 5433 no host para não conflitar com um Postgres local
+    volumes:
+      - tuuvo_pg_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tuuvo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: tuuvo_backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://tuuvo:tuuvo@postgres:5432/tuuvo
+      JWT_SECRET: troque-este-segredo-em-producao
+      CREDENTIALS_ENCRYPTION_KEY: "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=" # exemplo — TROCAR em produção
+      GTI_BASE_URL: https://api.gtiapi.workers.dev
+      MKOM_SMS_BASE_URL: https://sms.mkmservice.com/sms/api/transmission/v1
+      PUBLIC_BASE_URL: http://localhost:3000
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend/src:/app/src
+
+  # Frontend estático (sem build step — módulos ES nativos, servidos direto).
+  # O painel já sai apontando para o backend em localhost:3000 via querystring
+  # (js/config.js), então dá pra trocar o alvo sem rebuild: só mudar a URL.
+  frontend:
+    image: nginx:alpine
+    container_name: tuuvo_frontend
+    depends_on:
+      - backend
+    ports:
+      - "8081:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+
+volumes:
+  tuuvo_pg_data:
