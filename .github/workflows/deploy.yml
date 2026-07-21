@@ -99,6 +99,7 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
         run: |
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new $SSH_USER@$SSH_HOST "mkdir -p /opt/tuuvo"
           scp -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new .env.prod $SSH_USER@$SSH_HOST:/opt/tuuvo/.env
 
       - name: Deploy via SSH
@@ -108,6 +109,7 @@ jobs:
         run: |
           ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new $SSH_USER@$SSH_HOST << 'EOF'
             set -e
+            mkdir -p /opt/tuuvo
             cd /opt/tuuvo
 
             # Clonar o repositório se ainda não existir
