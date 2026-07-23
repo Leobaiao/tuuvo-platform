@@ -210,4 +210,4 @@ CREATE INDEX idx_contacts_tenant_ident ON contacts (tenant_id, identificador);
 -- ============================================================================
 
 INSERT INTO users (tenant_id, email, senha_hash, nome, papel)
-VALUES (NULL, 'superadmin@tuuvo.app.br', '$2a$10$BI1gvHaKvGbHYp8XsblBfOad27sUEs2Csi778HnkJG7t0h1Je46tG', 'Superadmin', 'superadmin');
+VALUES (NULL, 'superadmin@tuuvo.app.br', '$2a$10$vLtb/3U.qkbAt1fisPVNzufE4ijPqBySRNmK6IND.H5e5PShHV4u2', 'Superadmin', 'superadmin');

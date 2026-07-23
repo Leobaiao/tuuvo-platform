@@ -111,6 +111,25 @@ async function bootstrap() {
       errorEl.hidden = false;
     }
   });
+
+  const togglePasswordBtn = document.getElementById("toggle-password");
+  if (togglePasswordBtn) {
+    togglePasswordBtn.addEventListener("click", () => {
+      const passwordInput = document.getElementById("login-senha");
+      const iconEye = togglePasswordBtn.querySelector(".icon-eye");
+      const iconEyeOff = togglePasswordBtn.querySelector(".icon-eye-off");
+      
+      if (passwordInput.type === "password") {
+        passwordInput.type = "text";
+        iconEye.hidden = true;
+        iconEyeOff.hidden = false;
+      } else {
+        passwordInput.type = "password";
+        iconEye.hidden = false;
+        iconEyeOff.hidden = true;
+      }
+    });
+  }
 }
 
 document.getElementById("logout-btn")?.addEventListener("click", () => {
