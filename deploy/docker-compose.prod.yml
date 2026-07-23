@@ -48,6 +48,7 @@ services:
     restart: always
     networks:
       - internal
+      - proxy_net
 
   # ─── Frontend (HTML/CSS/JS estático servido via Nginx) ───
   frontend:
@@ -62,10 +63,14 @@ services:
     restart: always
     networks:
       - internal
+      - proxy_net
 
 networks:
   internal:
     driver: bridge
+  proxy_net:
+    name: proxy_net
+    external: true
 
 volumes:
   tuuvo_pg_data_prod:
