@@ -124,16 +124,16 @@ jobs:
             COMMIT_MSG=$(git log -1 --pretty=%B)
             if echo "$COMMIT_MSG" | grep -qi "\[reset-db\]"; then
               echo "⚠️  RESET-DB detectado! Apagando volumes de dados..."
-              docker compose -f deploy/docker-compose.prod.yml down -v || true
+              docker compose --env-file .env -p tuuvo -f deploy/docker-compose.prod.yml down -v || true
             fi
 
             # 1. Build das imagens
             echo "🏗️  Build das imagens..."
-            docker compose -f deploy/docker-compose.prod.yml build
+            docker compose --env-file .env -p tuuvo -f deploy/docker-compose.prod.yml build
 
             # 2. Subir APENAS o banco de dados
             echo "⏳ Subindo banco de dados..."
-            docker compose -f deploy/docker-compose.prod.yml up -d postgres
+            docker compose --env-file .env -p tuuvo -f deploy/docker-compose.prod.yml up -d postgres
 
             # 3. Aguardar o banco de dados ficar saudável
             echo "⏳ Aguardando banco de dados..."
@@ -152,7 +152,7 @@ jobs:
 
             # 4. Subir todos os serviços
             echo "🚀 Subindo backend e frontend..."
-            docker compose -f deploy/docker-compose.prod.yml up -d
+            docker compose --env-file .env -p tuuvo -f deploy/docker-compose.prod.yml up -d
 
             # 5. Aguardar o backend iniciar
             echo "⏳ Aguardando backend..."
