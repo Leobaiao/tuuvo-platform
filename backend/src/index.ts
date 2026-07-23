@@ -12,7 +12,12 @@ import { publicRouter } from "./routes/public.routes";
 import { initRealtime } from "./realtime/socket";
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 app.use(express.json({ limit: "5mb" }));
 
 // Serve o SDK de embed direto do backend em dev — em produção isso normalmente
