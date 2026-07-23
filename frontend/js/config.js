@@ -3,8 +3,11 @@
 // Ver seção 9 da especificação (Sandbox e SDK de embed).
 const params = new URLSearchParams(window.location.search);
 
+const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const defaultBackendUrl = isLocalhost ? "http://localhost:3000" : "https://api.tuuvo.app.br";
+
 export const config = {
-  backendUrl: params.get("backend") || "http://localhost:3000",
+  backendUrl: params.get("backend") || defaultBackendUrl,
   embed: params.get("embed") === "1",
   embedToken: params.get("token") || null,
 };
