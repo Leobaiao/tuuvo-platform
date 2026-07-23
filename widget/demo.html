@@ -2,30 +2,410 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>TUUVO — Sandbox do Widget</title>
+  <title>TUUVO — Sandbox do Widget de Chat</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
-    body { font-family: Inter, Arial, sans-serif; background: #F5F7FA; margin: 0; padding: 40px; color: #1A143D; }
-    .card { max-width: 640px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 32px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
-    h1 { font-size: 22px; }
-    code { background: #F1F4F9; padding: 2px 6px; border-radius: 4px; }
+    :root {
+      --tuuvo-escuro: #1A143D;
+      --tuuvo-primaria: #6A38E2;
+      --tuuvo-destaque: #8A5CF6;
+      --tuuvo-lavanda: #A78BFA;
+      --branco: #FFFFFF;
+      --bg: #0D0B1A;
+    }
+
+    * { box-sizing: border-box; margin: 0; }
+
+    body {
+      font-family: Inter, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--branco);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Background animado com gradientes */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: radial-gradient(ellipse at 20% 50%, rgba(106, 56, 226, 0.12) 0%, transparent 50%),
+                  radial-gradient(ellipse at 80% 20%, rgba(138, 92, 246, 0.08) 0%, transparent 50%),
+                  radial-gradient(ellipse at 50% 80%, rgba(167, 139, 250, 0.06) 0%, transparent 50%);
+      animation: bg-drift 20s ease-in-out infinite;
+      z-index: 0;
+    }
+
+    @keyframes bg-drift {
+      0%, 100% { transform: translate(0, 0); }
+      33% { transform: translate(-2%, 1%); }
+      66% { transform: translate(1%, -2%); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 60px 24px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .brand img {
+      width: 40px;
+      height: auto;
+      filter: drop-shadow(0 0 12px rgba(106, 56, 226, 0.5));
+    }
+
+    .brand strong {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: 24px;
+      letter-spacing: 0.02em;
+    }
+
+    .badge {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--tuuvo-primaria), var(--tuuvo-destaque));
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+
+    .header h1 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #fff 0%, var(--tuuvo-lavanda) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header p {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 16px;
+      line-height: 1.6;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* Cards */
+    .card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(12px);
+      transition: border-color 0.3s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(106, 56, 226, 0.3);
+    }
+
+    .card h2 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card h2 .icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--tuuvo-primaria), var(--tuuvo-destaque));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .card p, .card li {
+      color: rgba(255, 255, 255, 0.65);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .card li {
+      padding: 6px 0;
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .card li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--tuuvo-destaque);
+    }
+
+    /* Config form */
+    .config-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .config-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .config-field.full { grid-column: 1 / -1; }
+
+    .config-field label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .config-field input, .config-field select {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace, Inter, sans-serif;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .config-field input:focus, .config-field select:focus {
+      border-color: var(--tuuvo-primaria);
+    }
+
+    .config-field select option {
+      background: var(--tuuvo-escuro);
+      color: #fff;
+    }
+
+    .btn-apply {
+      margin-top: 20px;
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, var(--tuuvo-primaria), var(--tuuvo-destaque));
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .btn-apply:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(106, 56, 226, 0.4);
+    }
+
+    .btn-apply:active {
+      transform: translateY(0);
+    }
+
+    /* Status pill */
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(34, 197, 94, 0.1);
+      color: #22C55E;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 20px;
+      margin-top: 12px;
+    }
+
+    .status .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #22C55E;
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .code-block {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 12px;
+      overflow-x: auto;
+    }
+
+    .code-block code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.75);
+      line-height: 1.6;
+      white-space: pre;
+    }
+
+    .code-block .tag { color: #22C55E; }
+    .code-block .attr { color: var(--tuuvo-lavanda); }
+    .code-block .val { color: #F59E0B; }
+
+    .footer {
+      text-align: center;
+      padding: 40px 0 20px;
+      color: rgba(255, 255, 255, 0.25);
+      font-size: 12px;
+    }
+
+    @media (max-width: 600px) {
+      .config-grid { grid-template-columns: 1fr; }
+      .header h1 { font-size: 24px; }
+      .container { padding: 32px 16px; }
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Sandbox — TUUVO Webchat Widget</h1>
-    <p>Esta página simula o site de um cliente com o widget embutido. Troque
-       <code>data-tenant</code> e <code>data-widget</code> pelos IDs reais criados
-       via API do Superadmin/tenant antes de testar.</p>
-    <p>O balão flutuante aparece no canto inferior direito.</p>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <img src="./assets/tuuvo-mark.png" alt="TUUVO" />
+        <strong>TUUVO</strong>
+      </div>
+      <div><span class="badge">Sandbox</span></div>
+      <h1>Widget de Chat — Área de Teste</h1>
+      <p>Esta página simula o site de um cliente final com o widget TUUVO embutido.
+         Configure os parâmetros abaixo e clique no balão roxo no canto inferior direito.</p>
+    </div>
+
+    <!-- Instruções -->
+    <div class="card">
+      <h2><span class="icon">📋</span> Como testar</h2>
+      <ul>
+        <li>Crie um <strong>Tenant</strong> via painel do Superadmin</li>
+        <li>Crie uma <strong>Conexão de Canal</strong> do tipo <code style="background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px;">webchat</code></li>
+        <li>Crie um <strong>Widget</strong> no Widget Builder e publique</li>
+        <li>Cole os IDs nos campos abaixo e clique em <strong>Aplicar</strong></li>
+        <li>O balão de chat aparecerá no canto inferior direito</li>
+      </ul>
+    </div>
+
+    <!-- Configuração -->
+    <div class="card">
+      <h2><span class="icon">⚙️</span> Configuração do Widget</h2>
+      <p>Preencha os IDs do tenant e do widget criados no painel.</p>
+
+      <div class="config-grid">
+        <div class="config-field">
+          <label>Tenant ID</label>
+          <input type="text" id="cfg-tenant" placeholder="00000000-0000-0000-0000-000000000000" />
+        </div>
+        <div class="config-field">
+          <label>Widget ID</label>
+          <input type="text" id="cfg-widget" placeholder="00000000-0000-0000-0000-000000000001" />
+        </div>
+      </div>
+
+      <button class="btn-apply" id="btn-apply" type="button">🚀 Aplicar e Carregar Widget</button>
+
+      <div id="status-area"></div>
+    </div>
+
+    <!-- Snippet de integração -->
+    <div class="card">
+      <h2><span class="icon">🔗</span> Snippet de Integração</h2>
+      <p>Cole este código no HTML do site do cliente para embutir o widget:</p>
+      <div class="code-block">
+        <code id="snippet-code"><span class="tag">&lt;script</span>
+  <span class="attr">src</span>=<span class="val">"<span id="snippet-src">https://api.tuuvo.app.br/tuuvo-widget.js</span>"</span>
+  <span class="attr">data-tenant</span>=<span class="val">"<span id="snippet-tenant">SEU_TENANT_ID</span>"</span>
+  <span class="attr">data-widget</span>=<span class="val">"<span id="snippet-widget">SEU_WIDGET_ID</span>"</span>
+  <span class="attr">data-backend</span>=<span class="val">"<span id="snippet-backend">https://api.tuuvo.app.br</span>"</span>
+  <span class="attr">data-socket</span>=<span class="val">"<span id="snippet-socket">https://api.tuuvo.app.br</span>"</span><span class="tag">&gt;&lt;/script&gt;</span></code>
+      </div>
+    </div>
+
+    <div class="footer">TUUVO © 2025 — Plataforma de Conversas Multi-Canal</div>
   </div>
 
-  <script
-    src="./tuuvo-widget.js"
-    data-tenant="00000000-0000-0000-0000-000000000000"
-    data-widget="00000000-0000-0000-0000-000000000001"
-    data-backend="http://localhost:3000"
-    data-socket="http://localhost:3000"
-  ></script>
+  <script>
+    // Detecta automaticamente se estamos em localhost ou produção
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const backendUrl = isLocalhost ? 'http://localhost:3000' : 'https://api.tuuvo.app.br';
+
+    document.getElementById('snippet-src').textContent = `${backendUrl}/tuuvo-widget.js`;
+    document.getElementById('snippet-backend').textContent = backendUrl;
+    document.getElementById('snippet-socket').textContent = backendUrl;
+
+    document.getElementById('btn-apply').addEventListener('click', () => {
+      const tenantId = document.getElementById('cfg-tenant').value.trim();
+      const widgetId = document.getElementById('cfg-widget').value.trim();
+
+      if (!tenantId) {
+        alert('Preencha o Tenant ID');
+        return;
+      }
+
+      // Atualiza o snippet visual
+      document.getElementById('snippet-tenant').textContent = tenantId;
+      document.getElementById('snippet-widget').textContent = widgetId || '(nenhum)';
+
+      // Remove widget anterior se existir
+      document.querySelectorAll('.tuuvo-bubble, .tuuvo-panel').forEach(el => el.remove());
+      document.querySelectorAll('style').forEach(el => {
+        if (el.textContent.includes('tuuvo-bubble')) el.remove();
+      });
+
+      // Injeta o widget
+      const script = document.createElement('script');
+      script.src = `${backendUrl}/tuuvo-widget.js`;
+      script.setAttribute('data-tenant', tenantId);
+      if (widgetId) script.setAttribute('data-widget', widgetId);
+      script.setAttribute('data-backend', backendUrl);
+      script.setAttribute('data-socket', backendUrl);
+      document.body.appendChild(script);
+
+      // Status de sucesso
+      const statusArea = document.getElementById('status-area');
+      statusArea.innerHTML = '<div class="status"><span class="dot"></span> Widget carregado com sucesso</div>';
+    });
+  </script>
 </body>
 </html>
