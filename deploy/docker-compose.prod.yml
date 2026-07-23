@@ -1,3 +1,5 @@
+name: tuuvo
+
 services:
   # ─── Banco de Dados (PostgreSQL) ───
   postgres:
