@@ -8,7 +8,7 @@
 const params = new URLSearchParams(window.location.search);
 
 export const config = {
-  backendUrl: params.get("backend") || "https://api.tuuvo.app.br",
+  backendUrl: params.get("backend") || "https://back.tuuvo.app.br",
   embed: params.get("embed") === "1",
   embedToken: params.get("token") || null,
 };

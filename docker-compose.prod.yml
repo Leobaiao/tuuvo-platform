@@ -32,7 +32,7 @@ services:
       GTI_BASE_URL: https://api.gtiapi.workers.dev
       MKOM_RCS_BASE_URL: https://sms.mkmservice.com/sms/api/transmission/v1
       ZERNIO_BASE_URL: https://zernio.com/api/v1
-      PUBLIC_BASE_URL: https://api.tuuvo.app.br
+      PUBLIC_BASE_URL: https://back.tuuvo.app.br
       PORT: 3000
     ports:
       - "3000:3000"
