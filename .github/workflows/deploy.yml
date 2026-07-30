@@ -21,8 +21,10 @@ jobs:
             cd $HOME/tuuvo-platform
             git pull origin main
             
-            # Derruba versão antiga se existir
+            # Remove os contêineres antigos à força para evitar conflito de nomes
+            docker rm -f tuuvo_db tuuvo_api tuuvo_superadmin tuuvo_admin_tenant tuuvo_webchat_widget || true
             docker compose down || true
+            docker compose -f docker-compose.prod.yml down || true
             
             # Prepara as variáveis de ambiente
             cat << 'EOF' > .env
