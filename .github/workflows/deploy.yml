@@ -15,7 +15,10 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd ~/tuuvo-platform || (git clone https://github.com/Leobaiao/tuuvo-platform.git ~/tuuvo-platform && cd ~/tuuvo-platform)
+            if [ ! -d "$HOME/tuuvo-platform" ]; then
+              git clone https://github.com/Leobaiao/tuuvo-platform.git $HOME/tuuvo-platform
+            fi
+            cd $HOME/tuuvo-platform
             git pull origin main
             
             # Derruba versão antiga se existir
