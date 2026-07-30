@@ -1,0 +1,69 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tuuvo_db
+    environment:
+      POSTGRES_DB: tuuvo
+      POSTGRES_USER: tuuvo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - tuuvo_pg_data_v2:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tuuvo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: tuuvo_api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://tuuvo:${POSTGRES_PASSWORD}@postgres:5432/tuuvo
+      JWT_SECRET_TENANT: ${JWT_SECRET_TENANT}
+      JWT_SECRET_TUUVO: ${JWT_SECRET_TUUVO}
+      CREDENTIALS_ENCRYPTION_KEY: ${CREDENTIALS_ENCRYPTION_KEY}
+      GTI_BASE_URL: https://api.gtiapi.workers.dev
+      MKOM_RCS_BASE_URL: https://sms.mkmservice.com/sms/api/transmission/v1
+      ZERNIO_BASE_URL: https://zernio.com/api/v1
+      PUBLIC_BASE_URL: https://api.tuuvo.app.br
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  admin-tuuvo:
+    image: nginx:alpine
+    container_name: tuuvo_superadmin
+    ports:
+      - "3002:80"
+    volumes:
+      - ./admin-tuuvo:/usr/share/nginx/html:ro
+    restart: unless-stopped
+
+  admin-tenant:
+    image: nginx:alpine
+    container_name: tuuvo_admin_tenant
+    ports:
+      - "3001:80"
+    volumes:
+      - ./admin-tenant:/usr/share/nginx/html:ro
+    restart: unless-stopped
+
+  webchat-widget:
+    image: nginx:alpine
+    container_name: tuuvo_webchat_widget
+    ports:
+      - "3003:80"
+    volumes:
+      - ./widget:/usr/share/nginx/html:ro
+    restart: unless-stopped
+
+volumes:
+  tuuvo_pg_data_v2:

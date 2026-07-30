@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>TUUVO — Painel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <div class="brand"><strong>TUUVO</strong></div>
+      <p class="login-subtitle">Entre para acessar o painel de conversas.</p>
+      <form id="login-form">
+        <div class="field"><label>E-mail</label><input type="email" id="login-email" required /></div>
+        <div class="field"><label>Senha</label><input type="password" id="login-senha" required /></div>
+        <div id="login-error" class="login-error" hidden></div>
+        <button type="submit" class="btn btn-block">Entrar</button>
+      </form>
+      <div style="text-align:center; margin-top:14px;">
+        <button id="esqueci-senha-link" class="link-btn" style="color:var(--tuuvo-primaria);">Esqueci minha senha</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="esqueci-screen" class="login-screen" hidden>
+    <div class="login-card">
+      <div class="brand"><strong>TUUVO</strong></div>
+      <p class="login-subtitle">Informe seu e-mail — se existir conta, você recebe um link.</p>
+      <form id="esqueci-form">
+        <div class="field"><label>E-mail</label><input type="email" id="esqueci-email" required /></div>
+        <button type="submit" class="btn btn-block">Enviar link</button>
+      </form>
+      <div style="text-align:center; margin-top:14px;">
+        <button id="voltar-login-link" class="link-btn" style="color:var(--tuuvo-primaria);">Voltar pro login</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="app" class="app" hidden>
+    <div class="sidebar">
+      <div class="brand"><strong>TUUVO</strong></div>
+      <div class="nav-item" data-route="inbox">💬 Conversas</div>
+      <div class="nav-item" data-route="relatorios">📈 Relatórios</div>
+      <div style="height:12px;"></div>
+      <div class="nav-item" data-route="equipes">🗂️ Equipes</div>
+      <div class="nav-item" data-route="canais">📡 Canais</div>
+      <div class="nav-item" data-route="widget">🎨 Widget Builder</div>
+      <div class="nav-item" data-route="usuarios">👥 Usuários</div>
+      <div class="nav-item" data-route="integracoes">🔑 Integrações</div>
+      <div class="sidebar-footer">
+        <div id="current-user"></div>
+        <button id="logout-btn" class="link-btn">Sair</button>
+      </div>
+    </div>
+    <div class="main" id="main-content"></div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

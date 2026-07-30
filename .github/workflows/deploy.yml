@@ -1,0 +1,33 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd ~/tuuvo-platform || (git clone https://github.com/Leobaiao/tuuvo-platform.git ~/tuuvo-platform && cd ~/tuuvo-platform)
+            git pull origin main
+            
+            # Derruba versão antiga se existir
+            docker compose down || true
+            
+            # Prepara as variáveis de ambiente
+            cat << 'EOF' > .env
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            JWT_SECRET_TENANT=${{ secrets.JWT_SECRET_TENANT }}
+            JWT_SECRET_TUUVO=${{ secrets.JWT_SECRET_TUUVO }}
+            CREDENTIALS_ENCRYPTION_KEY=${{ secrets.CREDENTIALS_ENCRYPTION_KEY }}
+            EOF
+            
+            # Inicia o projeto com as configurações de produção
+            docker compose -f docker-compose.prod.yml up -d --build

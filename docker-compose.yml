@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tuuvo_postgres_v2
+    environment:
+      POSTGRES_DB: tuuvo
+      POSTGRES_USER: tuuvo
+      POSTGRES_PASSWORD: tuuvo
+    ports:
+      - "5433:5432"
+    volumes:
+      - tuuvo_pg_data_v2:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tuuvo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: tuuvo_backend_v2
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://tuuvo:tuuvo@postgres:5432/tuuvo
+      JWT_SECRET_TENANT: troque-este-segredo-tenant-em-producao
+      JWT_SECRET_TUUVO: troque-este-outro-segredo-tuuvo-em-producao
+      CREDENTIALS_ENCRYPTION_KEY: "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=" # exemplo — TROCAR em produção
+      GTI_BASE_URL: https://api.gtiapi.workers.dev
+      MKOM_RCS_BASE_URL: https://sms.mkmservice.com/sms/api/transmission/v1
+      ZERNIO_BASE_URL: https://zernio.com/api/v1
+      PUBLIC_BASE_URL: http://localhost:3000
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend/src:/app/src
+
+  # Administração TUUVO (time interno)
+  admin-tuuvo:
+    image: nginx:alpine
+    container_name: tuuvo_admin_tuuvo
+    depends_on: [backend]
+    ports:
+      - "8082:80"
+    volumes:
+      - ./admin-tuuvo:/usr/share/nginx/html:ro
+
+  # Administração do Tenant (clientes)
+  admin-tenant:
+    image: nginx:alpine
+    container_name: tuuvo_admin_tenant
+    depends_on: [backend]
+    ports:
+      - "8081:80"
+    volumes:
+      - ./admin-tenant:/usr/share/nginx/html:ro
+
+volumes:
+  tuuvo_pg_data_v2:
