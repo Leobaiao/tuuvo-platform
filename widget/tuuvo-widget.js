@@ -32,7 +32,19 @@
   let cfg = { ...DEFAULTS };
   let aberto = false;
   let socket = null;
-  const visitorId = "visitor-" + Math.random().toString(36).slice(2, 10);
+  // Persistido no localStorage — sem isso, cada F5 na página criava um
+  // "visitante" novo pro backend (contato novo, conversa nova, histórico
+  // perdido). Com isso, a mesma pessoa mantém a mesma conversa ao recarregar.
+  const visitorId = (function () {
+    const chave = "tuuvo_visitor_id";
+    let id = null;
+    try { id = localStorage.getItem(chave); } catch {}
+    if (!id) {
+      id = "visitor-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+      try { localStorage.setItem(chave, id); } catch {}
+    }
+    return id;
+  })();
 
   function injectStyles() {
     const style = document.createElement("style");
@@ -92,7 +104,7 @@
     if (!texto) return;
     appendMessage(texto, true);
     input.value = "";
-    if (socket) socket.emit("webchat:message", { text: texto, visitorId });
+    if (socket) socket.emit("webchat:message", { text: texto });
   }
 
   function appendMessage(texto, self) {
@@ -115,7 +127,7 @@
       console.warn("[TUUVO Widget] Socket.IO indisponível — widget funciona só com a mensagem de boas-vindas.");
       return;
     }
-    socket = window.io(backendUrl, { auth: { tenantId, widgetId } });
+    socket = window.io(backendUrl, { auth: { tenantId, widgetId, visitorId } });
     socket.on("message:new", (payload) => {
       if (payload.message?.remetente_tipo === "agente" && payload.message?.visivel_pro_solicitante) {
         appendMessage(payload.message.conteudo, false);

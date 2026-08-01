@@ -1,10 +1,17 @@
 /**
- * Tempo real via Socket.IO. Duas formas de entrar na mesma "sala" de tenant:
- *  - Widget de webchat (visitante anônimo): identifica-se por tenantId+widgetId
- *  - Painel do agente: identifica-se por token de tenant (authTenant.service.ts)
- * Ambos recebem `message:new` e `conversation:updated` em tempo real — é
- * assim que "múltiplos atendentes vendo a mesma coisa ao vivo" funciona,
- * e também como a transferência/nota interna avisam os dois lados na hora.
+ * Tempo real via Socket.IO. Duas formas MUITO diferentes de conexão, com
+ * isolamento explícito entre elas:
+ *  - Painel do agente (token de tenant válido): entra na sala geral do
+ *    tenant — vê TODAS as conversas, é assim que "múltiplos atendentes
+ *    vendo tudo ao vivo" funciona.
+ *  - Widget de webchat (visitante anônimo, tenantId+widgetId+visitorId):
+ *    entra SÓ na própria sala, isolada por visitorId — nunca na sala geral.
+ *
+ * ⚠️ Bug real corrigido aqui (não documentação, comportamento errado que
+ * existia antes): visitante entrava na MESMA sala geral do tenant que os
+ * agentes, então recebia `message:new` de QUALQUER conversa daquele
+ * tenant — um visitante veria a resposta destinada a outro visitante
+ * completamente diferente. Corrigido separando as salas por completo.
  */
 import { Server as HttpServer } from "http";
 import { Server as SocketIOServer, Socket } from "socket.io";
@@ -19,12 +26,13 @@ export function initRealtime(server: HttpServer): SocketIOServer {
   io = new SocketIOServer(server, { cors: { origin: "*" } });
 
   io.on("connection", (socket: Socket) => {
-    const { tenantId, widgetId, token } = socket.handshake.auth as {
-      tenantId?: string; widgetId?: string; token?: string;
+    const { tenantId, widgetId, visitorId, token } = socket.handshake.auth as {
+      tenantId?: string; widgetId?: string; visitorId?: string; token?: string;
     };
 
-    let resolvedTenantId = tenantId;
+    // Caminho do AGENTE — token válido, entra na sala geral do tenant.
     if (token) {
+      let resolvedTenantId: string;
       try {
         const payload = jwt.verify(token, env.jwtSecretTenant) as { tenantId: string };
         resolvedTenantId = payload.tenantId;
@@ -32,24 +40,24 @@ export function initRealtime(server: HttpServer): SocketIOServer {
         socket.disconnect(true);
         return;
       }
-    }
-    if (!resolvedTenantId) {
-      socket.disconnect(true);
+      socket.join(tenantRoom(resolvedTenantId));
       return;
     }
 
-    socket.join(tenantRoom(resolvedTenantId));
-    if (widgetId) socket.join(widgetVisitorRoom(resolvedTenantId, widgetId, socket.id));
+    // Caminho do VISITANTE ANÔNIMO — nunca entra na sala geral, só na própria.
+    if (!tenantId || !widgetId || !visitorId) {
+      socket.disconnect(true);
+      return;
+    }
+    socket.join(visitorRoom(tenantId, visitorId));
 
-    // Mensagem enviada pelo visitante do webchat — canal nativo, sem driver externo.
-    socket.on("webchat:message", async (payload: { text: string; visitorId: string }) => {
-      if (!widgetId) return;
-      const connectionId = await resolveWebchatConnectionId(resolvedTenantId!);
+    socket.on("webchat:message", async (payload: { text: string }) => {
+      const connectionId = await resolveWebchatConnectionId(tenantId);
       if (!connectionId) return;
 
-      await ingestInboundMessage(resolvedTenantId!, connectionId, {
+      await ingestInboundMessage(tenantId, connectionId, {
         externalId: `${socket.id}-${Date.now()}`,
-        from: payload.visitorId,
+        from: visitorId,
         type: "texto",
         content: payload.text,
         raw: payload,
@@ -62,12 +70,16 @@ export function initRealtime(server: HttpServer): SocketIOServer {
 }
 
 function tenantRoom(tenantId: string) { return `tenant:${tenantId}`; }
-function widgetVisitorRoom(tenantId: string, widgetId: string, socketId: string) {
-  return `visitor:${tenantId}:${widgetId}:${socketId}`;
-}
+function visitorRoom(tenantId: string, visitorId: string) { return `visitor:${tenantId}:${visitorId}`; }
 
+/** Avisa TODOS os agentes do tenant — usado pelo painel (inbox em tempo real). */
 export function emitToTenant(tenantId: string, event: string, data: unknown) {
   io?.to(tenantRoom(tenantId)).emit(event, data);
+}
+
+/** Avisa só UM visitante específico — usado quando o agente responde (seção 15). */
+export function emitToVisitor(tenantId: string, visitorId: string, event: string, data: unknown) {
+  io?.to(visitorRoom(tenantId, visitorId)).emit(event, data);
 }
 
 async function resolveWebchatConnectionId(tenantId: string): Promise<string | null> {

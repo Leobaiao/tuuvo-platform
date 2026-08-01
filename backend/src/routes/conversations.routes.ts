@@ -3,7 +3,7 @@ import { z } from "zod";
 import { withTenantContext } from "../db/pool";
 import { requireTenantAuthOrApiKey } from "../middleware/auth";
 import { getDriver } from "../drivers/registry";
-import { emitToTenant } from "../realtime/socket";
+import { emitToTenant, emitToVisitor } from "../realtime/socket";
 import { criarNotaInterna, transferirConversa } from "../services/conversation.service";
 
 export const conversationsRouter = Router();
@@ -88,6 +88,13 @@ conversationsRouter.post("/:id/reply", async (req, res) => {
     )
   );
   emitToTenant(tenantId, "message:new", { conversationId: req.params.id, message: message.rows[0] });
+  // Webchat: além de avisar os agentes (linha acima), avisa o VISITANTE
+  // específico — nunca a sala geral do tenant (ver nota de segurança em
+  // realtime/socket.ts). `destino` aqui é o identificador do contato, que
+  // pro canal webchat É o visitorId gerado pelo próprio widget.
+  if (conversation.canal_tipo === "webchat") {
+    emitToVisitor(tenantId, conversation.destino, "message:new", { conversationId: req.params.id, message: message.rows[0] });
+  }
   res.status(201).json(message.rows[0]);
 });
 
