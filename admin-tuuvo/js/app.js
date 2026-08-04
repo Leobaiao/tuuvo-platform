@@ -46,14 +46,28 @@ async function bootstrap() {
     const email = document.getElementById("login-email").value;
     const senha = document.getElementById("login-senha").value;
     const errorEl = document.getElementById("login-error");
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    
     errorEl.hidden = true;
+    
+    const originalBtnText = submitBtn.textContent;
+    submitBtn.textContent = "Entrando...";
+    submitBtn.disabled = true;
+
     try {
       const { token, user } = await api.post("/tuuvo/auth/login", { email, senha });
       setSession(token, user);
       showApp();
-    } catch {
-      errorEl.textContent = "E-mail ou senha inválidos.";
+    } catch (err) {
+      let msg = err.message || "Erro desconhecido ao fazer login.";
+      if (msg.toLowerCase().includes("failed to fetch")) {
+        msg = "Não foi possível conectar ao servidor. Verifique a internet ou o status da API.";
+      }
+      errorEl.textContent = msg;
       errorEl.hidden = false;
+    } finally {
+      submitBtn.textContent = originalBtnText;
+      submitBtn.disabled = false;
     }
   });
 }
