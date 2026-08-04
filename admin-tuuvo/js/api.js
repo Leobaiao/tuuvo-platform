@@ -20,8 +20,12 @@ async function request(method, path, body) {
 
   if (res.status === 401) {
     clearSession();
-    window.location.reload();
-    throw new ApiError("Sessão expirada", 401);
+    // Não recarrega a página se for uma tentativa de login, 
+    // para permitir que o frontend mostre a mensagem de "senha inválida"
+    if (!path.includes("/login")) {
+      window.location.reload();
+    }
+    throw new ApiError("Sessão expirada ou credenciais inválidas", 401);
   }
 
   const isJson = res.headers.get("content-type")?.includes("application/json");
