@@ -5,6 +5,7 @@
  * prefixo é o que permite os dois frontends (admin-tuuvo/, admin-tenant/)
  * apontarem pra APIs claramente distintas sem ambiguidade.
  */
+import "express-async-errors"; // Deve vir antes do express
 import express from "express";
 import cors from "cors";
 import http from "http";
@@ -40,9 +41,14 @@ app.use("/tenant", tenantRouter);   // rotas autenticadas depois
 app.use("/conversations", conversationsRouter);
 app.use("/webhooks", webhooksRouter);
 
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
-  res.status(500).json({ error: "Erro interno" });
+  
+  if (err.code === '23505') {
+    return res.status(400).json({ error: "Já existe um registro com estes dados (conflito único)." });
+  }
+
+  res.status(500).json({ error: "Erro interno do servidor." });
 });
 
 const server = http.createServer(app);
