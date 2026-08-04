@@ -14,9 +14,18 @@ async function request(method, path, body) {
   const headers = { "Content-Type": "application/json" };
   if (session?.token) headers.Authorization = `Bearer ${session.token}`;
 
-  const res = await fetch(`${config.backendUrl}${path}`, {
-    method, headers, body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(`${config.backendUrl}${path}`, {
+      method, headers, body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (error) {
+    console.error("Fetch falhou:", error);
+    if (error.name === "TypeError" && error.message.includes("Failed to fetch")) {
+      throw new ApiError("Erro de conexão com o servidor. O servidor pode estar fora do ar ou ocorreu um problema de CORS.", 0, error);
+    }
+    throw new ApiError("Erro de rede inesperado.", 0, error);
+  }
 
   if (res.status === 401) {
     clearSession();
