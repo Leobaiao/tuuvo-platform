@@ -40,7 +40,22 @@ async function request(method, path, body) {
   const isJson = res.headers.get("content-type")?.includes("application/json");
   const data = isJson ? await res.json().catch(() => null) : null;
 
-  if (!res.ok) throw new ApiError(data?.error?.toString?.() ?? "Erro na requisição", res.status, data);
+  if (!res.ok) {
+    let errorMessage = "Erro na requisição";
+    if (typeof data?.error === "string") {
+      errorMessage = data.error;
+    } else if (data?.error && typeof data.error === "object") {
+      if (Array.isArray(data.error.formErrors) && data.error.formErrors.length > 0) {
+        errorMessage = data.error.formErrors[0];
+      } else if (data.error.fieldErrors && Object.keys(data.error.fieldErrors).length > 0) {
+        const firstField = Object.keys(data.error.fieldErrors)[0];
+        errorMessage = `${firstField}: ${data.error.fieldErrors[firstField][0]}`;
+      } else {
+        errorMessage = JSON.stringify(data.error);
+      }
+    }
+    throw new ApiError(errorMessage, res.status, data);
+  }
   return data;
 }
 
